@@ -14,8 +14,6 @@
 # Clone and run
 git clone <your-repo-url>
 cd vpc-simulator
-sudo ./vpcctl.sh
-
 
 ```markdown
 ## 💻 Usage Examples
@@ -25,16 +23,30 @@ sudo ./vpcctl.sh
 # Make script executable
 chmod +x vpcctl.sh
 
-# Run full setup (requires sudo)
-sudo ./vpcctl.sh
+# 1. Create VPCs
+sudo ./vpcctl.sh create vpc vpc0 10.0.0.1/16 10.0.0.0/16
+sudo ./vpcctl.sh create vpc vpc1 10.10.0.1/16 10.10.0.0/16
 
-# Test web tier connectivity
-sudo ip netns exec web_ns ping 10.0.2.10
+# 2. Enable NAT for internet access
+sudo ./vpcctl.sh enable nat vpc0 10.0.0.0/16
 
-# Check security rules
-sudo ip netns exec web_ns iptables -L -n
+# 3. Add subnets
+sudo ./vpcctl.sh add subnet web_ns 10.0.1.0/24 public vpc0
+sudo ./vpcctl.sh add subnet db_ns 10.0.2.0/24 private vpc0
+sudo ./vpcctl.sh add subnet app_ns 10.10.1.0/24 public vpc1
 
-# Verify VPC peering
-ping -I vpc0 10.10.0.1
+# 4. Peer the VPCs
+sudo ./vpcctl.sh peer vpcs vpc0 10.0.0.0/16 vpc1 10.10.0.0/16
 
+# Test internet access
+sudo ./vpcctl.sh test internet web_ns
+sudo ./vpcctl.sh test internet app_ns
 
+# Test cross-subnet communication
+sudo ./vpcctl.sh test subnet_to_subnet web_ns db_ns
+
+# Test cross-VPC peering
+sudo ./vpcctl.sh test subnet_to_subnet web_ns app_ns
+
+# Remove all VPCs, subnets, and network configuration
+sudo ./vpcctl.sh clean
